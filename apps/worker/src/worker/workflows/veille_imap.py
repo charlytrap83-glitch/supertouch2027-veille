@@ -17,6 +17,7 @@ déploiement. Aucune valeur en dur dans le code.
 
 import email
 import email.policy
+import hashlib
 import imaplib
 import os
 import smtplib
@@ -108,7 +109,14 @@ async def releve_imap(last_uid: int) -> dict:
             "initialise": False,
         }
     except Exception as e:  # résilience du daemon : l'erreur remonte dans le résultat, pas d'arrêt
-        return {"erreur": f"IMAP : {type(e).__name__} : {e}"[:300], "new_last_uid": last_uid, "messages": [], "total": None, "initialise": False}
+        # Diagnostic (sans jamais exposer la valeur) : longueur et SHA-256 du mot de passe
+        # réellement reçu par le worker, pour distinguer une valeur erronée d'un blocage OVH.
+        diag = (
+            f" [diag: len={len(mdp)} sha256={hashlib.sha256(mdp.encode('utf-8')).hexdigest()}]"
+            if mdp
+            else " [diag: mdp absent]"
+        )
+        return {"erreur": f"IMAP : {type(e).__name__} : {e}{diag}"[:400], "new_last_uid": last_uid, "messages": [], "total": None, "initialise": False}
     finally:
         try:
             m.logout()
