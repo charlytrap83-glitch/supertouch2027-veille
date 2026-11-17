@@ -1,8 +1,8 @@
-"""Le worker découvre bien le workflow de veille, et le corps d'alerte est stable."""
+"""Le worker découvre bien le workflow de veille muette (aucun envoi de mail)."""
 
 import mistralai.workflows as workflows
 
-from worker.workflows.veille_imap import VeilleInput, corps_alerte
+from worker.workflows.veille_imap import VeilleInput
 
 
 def test_st2027_veille_imap_discovered() -> None:
@@ -15,19 +15,11 @@ def test_veille_input_defaults() -> None:
     v = VeilleInput()
     assert v.mode == "once"
     assert v.last_uid == 0
-    assert v.interval_minutes == 15
-    assert v.alert_dest == "charlytrapani@hotmail.fr"
+    assert v.interval_minutes == 12
 
 
-def test_corps_alerte_liste_les_mails() -> None:
-    releve = {
-        "messages": [
-            {"uid": 51, "de": "club@example.fr", "sujet": "Candidature J1", "date": "12 nov. 2026 09h12", "apercu": "Bonjour, nous souhaitons…"},
-        ],
-        "total": 49,
-    }
-    corps = corps_alerte(releve)
-    assert "club@example.fr" in corps
-    assert "Candidature J1" in corps
-    assert "1 nouveau(x) mail(s)" in corps
-    assert "supertouch@touchfrance.fr" in corps
+def test_veille_input_muette_sans_destinataire() -> None:
+    # Règle du 17 nov. 2026 : plus aucun champ de destinataire, aucun envoi de mail.
+    champs = set(VeilleInput.model_fields.keys())
+    assert "alert_dest" not in champs
+    assert all("dest" not in c for c in champs)
